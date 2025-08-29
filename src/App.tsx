@@ -8,49 +8,89 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './com
 import { Badge } from './components/ui/badge';
 import { Button } from './components/ui/button';
 import { Settings, BookOpen, Camera, FileText, TrendingUp, Brain } from 'lucide-react';
-import './styles/globals.css';
+import '@/styles/globals.css';
 
 export default function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
 
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'dashboard':
-        return <Dashboard onNavigate={setActiveSection} />;
-      case 'new-trade':
-        return <TradeEntry />;
-      case 'analytics':
-      case 'performance':
-      case 'risk':
-      case 'psychology':
-        return <Analytics />;
-      case 'journal':
-      case 'all-trades':
-        return <TradesJournal />;
-      case 'screenshots':
-        return <ScreenshotsGallery />;
-      case 'notes':
-        return <NotesAnalysis />;
-      case 'settings':
-        return <SettingsPanel />;
-      default:
-        return <Dashboard onNavigate={setActiveSection} />;
-    }
-  };
+//   const renderContent = () => {
+//     switch (activeSection) {
+//       case 'dashboard':
+//         return <Dashboard onNavigate={setActiveSection} />;
+//       case 'new-trade':
+//         return <TradeEntry />;
+//       case 'analytics':
+//       case 'performance':
+//       case 'risk':
+//       case 'psychology':
+//         return <Analytics />;
+//       case 'journal':
+//       case 'all-trades':
+//         return <TradesJournal />;
+//       case 'screenshots':
+//         return <ScreenshotsGallery />;
+//       case 'notes':
+//         return <NotesAnalysis />;
+//       case 'settings':
+//         return <SettingsPanel />;
+//       default:
+//         return <Dashboard onNavigate={setActiveSection} />;
+//     }
+//   };
 
-  return (
-    <SidebarProvider>
-      <div className="flex h-screen bg-background">
-        <Navigation 
-          activeSection={activeSection} 
-          onSectionChange={setActiveSection} 
-        />
-        <main className="flex-1 overflow-y-auto">
-          {renderContent()}
-        </main>
-      </div>
-    </SidebarProvider>
-  );
+//   return (
+//     <SidebarProvider>
+//       <div className="flex h-screen bg-background">
+//         <Navigation 
+//           activeSection={activeSection} 
+//           onSectionChange={setActiveSection} 
+//         />
+//         <main className="flex-1 overflow-y-auto">
+//           {renderContent()}
+//         </main>
+//       </div>
+//     </SidebarProvider>
+//   );
+// }
+
+const renderContent = () => {
+  switch (activeSection) {
+    case 'dashboard':
+      return <Dashboard onNavigate={setActiveSection} />;
+    case 'new-trade':
+      return <TradeEntry />;
+    case 'analytics':
+    case 'performance':
+    case 'risk':
+    case 'psychology':
+      return <Analytics />;
+    case 'journal':
+    case 'all-trades':
+      return <TradesJournal />;
+    case 'screenshots':
+      return <ScreenshotsGallery />;
+    case 'notes':
+      return <NotesAnalysis />;
+    case 'settings':
+      return <SettingsPanel />;
+    default:
+      return <Dashboard onNavigate={setActiveSection} />;
+  }
+};
+
+return (
+  <SidebarProvider>
+    <div className="flex h-screen bg-background w-full">  {/* Added w-full */}
+      <Navigation 
+        activeSection={activeSection} 
+        onSectionChange={setActiveSection} 
+      />
+      <main className="flex-1 overflow-y-auto w-full">  {/* Added w-full */}
+        {renderContent()}
+      </main>
+    </div>
+  </SidebarProvider>
+);
 }
 
 // Placeholder components for other sections
