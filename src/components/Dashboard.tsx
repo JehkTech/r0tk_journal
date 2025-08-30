@@ -46,9 +46,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 md:p-6 lg:p-8 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between w-full">
         <div>
           <h1 className="text-3xl font-semibold text-foreground">
             R0TK Journal
@@ -62,7 +62,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
         <Card className="border-l-4 border-l-green-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle>Total P&L</CardTitle>
@@ -76,7 +76,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-blue-500 w-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle>Win Rate</CardTitle>
             <Target className="h-4 w-4 text-blue-600" />
@@ -87,7 +87,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500">
+        <Card className="border-l-4 border-l-purple-500 w-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle>Avg RR</CardTitle>
             <TrendingUp className="h-4 w-4 text-purple-600" />
@@ -100,7 +100,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-orange-500">
+        <Card className="border-l-4 border-l-orange-500 w-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle>Total Trades</CardTitle>
             <Award className="h-4 w-4 text-orange-600" />
@@ -115,8 +115,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Monthly Performance</CardTitle>
             <CardDescription>Profit and loss breakdown by month</CardDescription>
@@ -167,7 +167,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <CardDescription>Your latest trading activity</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-4 w-full">
             {recentTrades.map((trade) => (
               <div key={trade.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex items-center space-x-4">
