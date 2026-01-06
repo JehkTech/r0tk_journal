@@ -4,6 +4,7 @@ import { Navigation } from "./components/Navigation";
 import { Dashboard } from "./components/Dashboard";
 import { TradeEntry } from "./components/TradeEntry";
 import { Analytics } from "./components/Analytics";
+import { supabase } from "../utils/supabase";
 import {
   Card,
   CardContent,
