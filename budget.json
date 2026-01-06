@@ -1,0 +1,27 @@
+{
+    "BudgetLimit": {
+        "Amount": "20.00",
+        "Unit": "USD"
+    },
+    "BudgetName": "r0tk Simple Monthly Budget",
+    "BudgetType": "COST",
+    "FilterExpression": {
+        "Not": {
+            "Dimensions": {
+                "Key": "RECORD_TYPE",
+                "Values": [
+                    "Credit",
+                    "Refund"
+                ]
+            }
+        }
+    },
+    "Metrics": [
+        "UnblendedCost"
+    ],
+    "TimePeriod": {
+        "Start": 1759276800000,
+        "End": 3706473600000
+    },
+    "TimeUnit": "Monthly"
+}

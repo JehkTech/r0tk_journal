@@ -1,0 +1,44 @@
+[
+    {
+        "Notification": {
+            "ComparisonOperator": "GREATER_THAN",
+            "NotificationType": "ACTUAL",
+            "Threshold": 85,
+            "ThresholdType": "PERCENTAGE"
+        },
+        "Subscribers": [
+            {
+                "SubscriptionType": "EMAIL",
+                "Address": "katemangwejehoiachin@gmail.com"
+            }
+        ]
+    },
+    {
+        "Notification": {
+            "ComparisonOperator": "GREATER_THAN",
+            "NotificationType": "ACTUAL",
+            "Threshold": 100,
+            "ThresholdType": "PERCENTAGE"
+        },
+        "Subscribers": [
+            {
+                "SubscriptionType": "EMAIL",
+                "Address": "katemangwejehoiachin@gmail.com"
+            }
+        ]
+    },
+    {
+        "Notification": {
+            "ComparisonOperator": "GREATER_THAN",
+            "NotificationType": "FORECASTED",
+            "Threshold": 100,
+            "ThresholdType": "PERCENTAGE"
+        },
+        "Subscribers": [
+            {
+                "SubscriptionType": "EMAIL",
+                "Address": "katemangwejehoiachin@gmail.com"
+            }
+        ]
+    }
+]
