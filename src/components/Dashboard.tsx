@@ -1,32 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, TrendingDown, Calendar, DollarSign, Target, Award } from 'lucide-react';
+import { useTrades } from '../lib/hooks/useTrades';
+import { useAuth } from '../context/AuthContext';
 
-const mockTradeData = [
-  { month: 'Jan', profit: 2400, loss: -800, trades: 45 },
-  { month: 'Feb', profit: 1800, loss: -1200, trades: 38 },
-  { month: 'Mar', profit: 3200, loss: -400, trades: 52 },
-  { month: 'Apr', profit: 2800, loss: -900, trades: 41 },
-  { month: 'May', profit: 3600, loss: -600, trades: 48 },
-  { month: 'Jun', profit: 4200, loss: -300, trades: 55 }
-];
-
-const recentTrades = [
-  { id: 1, pair: 'EUR/USD', side: 'Long', entry: '1.0945', exit: '1.0978', pnl: '+$330', session: 'London', emotion: 'Confident' },
-  { id: 2, pair: 'GBP/JPY', side: 'Short', entry: '184.45', exit: '183.89', pnl: '+$560', session: 'Asian', emotion: 'Focused' },
-  { id: 3, pair: 'USD/CAD', side: 'Long', entry: '1.3420', exit: '1.3385', pnl: '-$175', session: 'NY', emotion: 'Rushed' },
-  { id: 4, pair: 'AUD/USD', side: 'Short', entry: '0.6789', exit: '0.6812', pnl: '-$115', session: 'Asian', emotion: 'Uncertain' },
-  { id: 5, pair: 'EUR/GBP', side: 'Long', entry: '0.8567', exit: '0.8598', pnl: '+$310', session: 'London', emotion: 'Confident' }
-];
-
-const sessionColors = {
+const sessionColors: Record<string, string> = {
   'Asian': 'bg-blue-500',
   'London': 'bg-green-500',
-  'NY': 'bg-orange-500'
+  'NY': 'bg-orange-500',
+  'Overlap': 'bg-purple-500'
 };
 
 interface DashboardProps {
@@ -34,16 +20,86 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onNavigate }: DashboardProps) {
-  const totalPnL = 5420;
-  const winRate = 67.5;
-  const avgRR = 1.85;
-  const totalTrades = 279;
+  const { user } = useAuth();
+  const { trades, isLoading } = useTrades(user?.id);
 
   const handleAddTrade = () => {
     if (onNavigate) {
       onNavigate('new-trade');
     }
   };
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    if (trades.length === 0) {
+      return {
+        totalPnL: 0,
+        winRate: 0,
+        avgRR: 0,
+        totalTrades: 0,
+        winningTrades: 0,
+        losingTrades: 0
+      };
+    }
+
+    const winningTrades = trades.filter(t => t.profit_loss > 0);
+    const losingTrades = trades.filter(t => t.profit_loss < 0);
+    const totalPnL = trades.reduce((sum, t) => sum + t.profit_loss, 0);
+    const avgRR = trades.reduce((sum, t) => sum + t.rr_ratio, 0) / trades.length;
+
+    return {
+      totalPnL,
+      winRate: trades.length > 0 ? Math.round((winningTrades.length / trades.length) * 100) : 0,
+      avgRR: parseFloat(avgRR.toFixed(2)),
+      totalTrades: trades.length,
+      winningTrades: winningTrades.length,
+      losingTrades: losingTrades.length
+    };
+  }, [trades]);
+
+  // Generate monthly performance data
+  const monthlyData = useMemo(() => {
+    const months: Record<string, { profit: number; loss: number; trades: number }> = {};
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    trades.forEach(trade => {
+      const date = new Date(trade.date);
+      const monthKey = monthNames[date.getMonth()];
+      
+      if (!months[monthKey]) {
+        months[monthKey] = { profit: 0, loss: 0, trades: 0 };
+      }
+      
+      if (trade.profit_loss > 0) {
+        months[monthKey].profit += trade.profit_loss;
+      } else {
+        months[monthKey].loss += trade.profit_loss;
+      }
+      months[monthKey].trades += 1;
+    });
+
+    return monthNames
+      .filter(month => months[month])
+      .map(month => ({
+        month,
+        profit: months[month].profit,
+        loss: months[month].loss,
+        trades: months[month].trades
+      }));
+  }, [trades]);
+
+  // Recent trades (last 5)
+  const recentTrades = trades.slice(0, 5);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-4 md:p-6 lg:p-8 w-full">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading trades...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-6 lg:p-8 w-full">
@@ -69,9 +125,11 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">+${totalPnL.toLocaleString()}</div>
+            <div className={`text-2xl font-bold ${stats.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {stats.totalPnL >= 0 ? '+' : ''} ${Math.abs(stats.totalPnL).toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +12.5% from last month
+              From {stats.totalTrades} trades
             </p>
           </CardContent>
         </Card>
@@ -82,8 +140,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <Target className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{winRate}%</div>
-            <Progress value={winRate} className="mt-2" />
+            <div className="text-2xl font-bold text-blue-600">{stats.winRate}%</div>
+            <Progress value={stats.winRate} className="mt-2" />
           </CardContent>
         </Card>
 
@@ -93,7 +151,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <TrendingUp className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">1:{avgRR}</div>
+            <div className="text-2xl font-bold text-purple-600">1:{stats.avgRR}</div>
             <p className="text-xs text-muted-foreground">
               Risk to Reward Ratio
             </p>
@@ -106,9 +164,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <Award className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{totalTrades}</div>
+            <div className="text-2xl font-bold text-orange-600">{stats.totalTrades}</div>
             <p className="text-xs text-muted-foreground">
-              This year
+              All time
             </p>
           </CardContent>
         </Card>
@@ -122,16 +180,22 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <CardDescription>Profit and loss breakdown by month</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockTradeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="profit" fill="#22c55e" />
-                <Bar dataKey="loss" fill="#ef4444" />
-              </BarChart>
-            </ResponsiveContainer>
+            {monthlyData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="profit" fill="#22c55e" />
+                  <Bar dataKey="loss" fill="#ef4444" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                No trades yet. Add a trade to see performance data.
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -141,21 +205,27 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <CardDescription>Account balance progression</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockTradeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="profit" 
-                  stroke="#22c55e" 
-                  strokeWidth={3}
-                  dot={{ fill: '#22c55e', strokeWidth: 2, r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {monthlyData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line 
+                    type="monotone" 
+                    dataKey="profit" 
+                    stroke="#22c55e" 
+                    strokeWidth={3}
+                    dot={{ fill: '#22c55e', strokeWidth: 2, r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                No trades yet. Add a trade to see balance curve.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -167,35 +237,40 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <CardDescription>Your latest trading activity</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4 w-full">
-            {recentTrades.map((trade) => (
-              <div key={trade.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-3 h-3 rounded-full ${sessionColors[trade.session as keyof typeof sessionColors]}`} />
-                  <div>
-                    <div className="font-medium">{trade.pair}</div>
-                    <div className="text-sm text-muted-foreground">{trade.side} • {trade.session} Session</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground">Entry: {trade.entry}</div>
-                    <div className="text-sm text-muted-foreground">Exit: {trade.exit}</div>
+          {recentTrades.length > 0 ? (
+            <div className="space-y-4 w-full">
+              {recentTrades.map((trade) => (
+                <div key={trade.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-3 h-3 rounded-full ${sessionColors[trade.session] || 'bg-gray-500'}`} />
+                    <div>
+                      <div className="font-medium">{trade.pair}</div>
+                      <div className="text-sm text-muted-foreground">{trade.side} • {trade.session} Session</div>
+                    </div>
                   </div>
                   
-                  <Badge variant={trade.pnl.startsWith('+') ? 'default' : 'destructive'} 
-                         className={trade.pnl.startsWith('+') ? 'bg-green-600' : 'bg-red-600'}>
-                    {trade.pnl}
-                  </Badge>
-                  
-                  <Badge variant="outline" className="text-muted-foreground border-muted-foreground">
-                    {trade.emotion}
-                  </Badge>
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <div className="text-sm text-muted-foreground">Entry: {trade.entry_price.toFixed(4)}</div>
+                      <div className="text-sm text-muted-foreground">Exit: {trade.exit_price.toFixed(4)}</div>
+                    </div>
+                    
+                    <Badge variant={trade.profit_loss >= 0 ? 'default' : 'destructive'} 
+                           className={trade.profit_loss >= 0 ? 'bg-green-600' : 'bg-red-600'}>
+                      {trade.profit_loss >= 0 ? '+' : ''} ${Math.abs(trade.profit_loss).toFixed(2)}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No trades yet. Start by adding your first trade!</p>
+              <Button onClick={handleAddTrade} className="mt-4">
+                Add Your First Trade
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
