@@ -22,7 +22,17 @@ import {
   FileText,
   TrendingUp,
   Brain,
+  Plus,
+  Trash2,
+  Edit2,
 } from "lucide-react";
+import { useTrades } from "./lib/hooks/useTrades";
+import { useNotes } from "./lib/hooks/useNotes";
+import { useScreenshots } from "./lib/hooks/useScreenshots";
+import { useSettings } from "./lib/hooks/useSettings";
+import { Switch } from "./components/ui/switch";
+import { Input } from "./components/ui/input";
+import { Textarea } from "./components/ui/textarea";
 import "@/styles/globals.css";
 
 function AppContent() {
@@ -61,15 +71,11 @@ function AppContent() {
   return (
     <SidebarProvider>
       <div className="flex h-screen bg-background w-full">
-        {" "}
-        {/* Added w-full */}
         <Navigation
           activeSection={activeSection}
           onSectionChange={setActiveSection}
         />
         <main className="flex-1 overflow-y-auto w-full">
-          {" "}
-          {/* Added w-full */}
           {renderContent()}
         </main>
       </div>
@@ -85,55 +91,18 @@ export default function App() {
   );
 }
 
-// Placeholder components for other sections
+// Real data components
 function TradesJournal() {
-  const mockTrades = [
-    {
-      id: 1,
-      date: "2024-01-15",
-      pair: "EUR/USD",
-      side: "Long",
-      pnl: "+$330",
-      session: "London",
-      rr: "1:2.1",
-    },
-    {
-      id: 2,
-      date: "2024-01-14",
-      pair: "GBP/JPY",
-      side: "Short",
-      pnl: "+$560",
-      session: "Asian",
-      rr: "1:1.8",
-    },
-    {
-      id: 3,
-      date: "2024-01-13",
-      pair: "USD/CAD",
-      side: "Long",
-      pnl: "-$175",
-      session: "NY",
-      rr: "1:0.8",
-    },
-    {
-      id: 4,
-      date: "2024-01-12",
-      pair: "AUD/USD",
-      side: "Short",
-      pnl: "-$115",
-      session: "Asian",
-      rr: "1:0.6",
-    },
-    {
-      id: 5,
-      date: "2024-01-11",
-      pair: "EUR/GBP",
-      side: "Long",
-      pnl: "+$310",
-      session: "London",
-      rr: "1:2.5",
-    },
-  ];
+  const { user } = useAuth();
+  const { trades, isLoading, deleteTrade } = useTrades(user?.id);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-6">
+        <p className="text-muted-foreground">Loading trades...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-6">
@@ -155,48 +124,60 @@ function TradesJournal() {
           <CardDescription>Detailed view of all your trades</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {mockTrades.map((trade) => (
-              <div
-                key={trade.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="text-sm text-muted-foreground">
-                    {trade.date}
-                  </div>
-                  <div>
-                    <div className="font-medium">{trade.pair}</div>
+          {trades.length > 0 ? (
+            <div className="space-y-4">
+              {trades.map((trade) => (
+                <div
+                  key={trade.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center space-x-4">
                     <div className="text-sm text-muted-foreground">
-                      {trade.side} • {trade.session}
+                      {trade.date}
+                    </div>
+                    <div>
+                      <div className="font-medium">{trade.pair}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {trade.side} • {trade.session}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center space-x-4">
-                  <Badge
-                    variant="outline"
-                    className="text-purple-600 border-purple-600"
-                  >
-                    R:R {trade.rr}
-                  </Badge>
-                  <Badge
-                    variant={
-                      trade.pnl.startsWith("+") ? "default" : "destructive"
-                    }
-                    className={
-                      trade.pnl.startsWith("+") ? "bg-green-600" : "bg-red-600"
-                    }
-                  >
-                    {trade.pnl}
-                  </Badge>
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
+                  <div className="flex items-center space-x-4">
+                    <Badge
+                      variant="outline"
+                      className="text-purple-600 border-purple-600"
+                    >
+                      R:R 1:{trade.rr_ratio.toFixed(2)}
+                    </Badge>
+                    <Badge
+                      variant={
+                        trade.profit_loss > 0 ? "default" : "destructive"
+                      }
+                      className={
+                        trade.profit_loss > 0 ? "bg-green-600" : "bg-red-600"
+                      }
+                    >
+                      {trade.profit_loss > 0 ? "+" : ""} ${Math.abs(
+                        trade.profit_loss
+                      ).toFixed(2)}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteTrade(trade.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No trades yet</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -204,6 +185,17 @@ function TradesJournal() {
 }
 
 function ScreenshotsGallery() {
+  const { user } = useAuth();
+  const { screenshots, isLoading, deleteScreenshot } = useScreenshots(user?.id);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-6">
+        <p className="text-muted-foreground">Loading screenshots...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
       <div className="text-center space-y-2">
@@ -226,16 +218,35 @@ function ScreenshotsGallery() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className="aspect-video bg-muted rounded-lg flex items-center justify-center"
-              >
-                <Camera className="w-12 h-12 text-muted-foreground" />
-              </div>
-            ))}
-          </div>
+          {screenshots.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {screenshots.map((screenshot) => (
+                <div key={screenshot.id} className="relative group">
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                    {screenshot.url && (
+                      <img
+                        src={screenshot.url}
+                        alt={screenshot.description || "Trade screenshot"}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => deleteScreenshot(screenshot.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No screenshots yet</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -243,6 +254,39 @@ function ScreenshotsGallery() {
 }
 
 function NotesAnalysis() {
+  const { user } = useAuth();
+  const { notes, isLoading, deleteNote, addNote } = useNotes(user?.id);
+  const [newNoteTitle, setNewNoteTitle] = useState("");
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddNote = async () => {
+    if (!newNoteTitle.trim() || !newNoteContent.trim()) {
+      return;
+    }
+
+    try {
+      await addNote({
+        user_id: user!.id,
+        title: newNoteTitle,
+        content: newNoteContent,
+      });
+      setNewNoteTitle("");
+      setNewNoteContent("");
+      setIsAdding(false);
+    } catch (error) {
+      console.error("Error adding note:", error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-6">
+        <p className="text-muted-foreground">Loading notes...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
       <div className="text-center space-y-2">
@@ -263,51 +307,67 @@ function NotesAnalysis() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 border rounded-lg">
-              <div className="text-sm text-muted-foreground mb-2">
-                EUR/USD - Jan 15, 2024
-              </div>
-              <p className="text-sm">
-                Perfect ICT setup with clear order block rejection. Market
-                showed beautiful liquidity sweep before reversing. Confidence
-                was high due to multiple confluences aligning.
+            {notes.length > 0 ? (
+              notes.map((note) => (
+                <div key={note.id} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="font-medium">{note.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(note.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteNote(note.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <p className="text-sm">{note.content}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-4">
+                No notes yet
               </p>
-            </div>
-            <div className="p-4 border rounded-lg">
-              <div className="text-sm text-muted-foreground mb-2">
-                GBP/JPY - Jan 14, 2024
-              </div>
-              <p className="text-sm">
-                Asian session scalp worked perfectly. Market intuition was
-                strong about the reversal point. Need to trust these insights
-                more consistently.
-              </p>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Brain className="w-5 h-5 mr-2" />
-              Pattern Recognition
+              <Plus className="w-5 h-5 mr-2" />
+              Add Note
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm">Order Block Setups</span>
-                <Badge className="bg-green-600">87% Success</Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Liquidity Sweeps</span>
-                <Badge className="bg-blue-600">73% Success</Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Fair Value Gaps</span>
-                <Badge className="bg-orange-600">65% Success</Badge>
-              </div>
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                placeholder="Note title"
+                value={newNoteTitle}
+                onChange={(e) => setNewNoteTitle(e.target.value)}
+              />
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Content</label>
+              <Textarea
+                placeholder="Write your analysis..."
+                value={newNoteContent}
+                onChange={(e) => setNewNoteContent(e.target.value)}
+                className="min-h-32"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleAddNote}
+              disabled={!newNoteTitle.trim() || !newNoteContent.trim()}
+            >
+              Add Note
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -316,6 +376,29 @@ function NotesAnalysis() {
 }
 
 function SettingsPanel() {
+  const { user } = useAuth();
+  const { settings, isLoading, updateSettings } = useSettings(user?.id);
+
+  const handleSettingChange = async (key: string, value: boolean) => {
+    if (!settings) return;
+    try {
+      await updateSettings({
+        ...settings,
+        [key]: value,
+      });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+    }
+  };
+
+  if (isLoading || !settings) {
+    return (
+      <div className="space-y-6 p-6">
+        <p className="text-muted-foreground">Loading settings...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
       <div className="text-center space-y-2">
@@ -336,51 +419,70 @@ function SettingsPanel() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              {[
-                { label: "Show Win Rate", enabled: true, color: "green" },
-                { label: "Show Risk:Reward", enabled: true, color: "blue" },
-                { label: "Show Balance Curve", enabled: true, color: "purple" },
-                {
-                  label: "Show Emotional Analysis",
-                  enabled: true,
-                  color: "orange",
-                },
-                {
-                  label: "Show Performance Metrics",
-                  enabled: true,
-                  color: "red",
-                },
-              ].map((setting) => (
-                <div
-                  key={setting.label}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm">{setting.label}</span>
-                  <div
-                    className={`w-4 h-4 rounded-full bg-${setting.color}-500`}
-                  ></div>
-                </div>
-              ))}
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Show Win Rate</span>
+                <Switch
+                  checked={settings.show_win_rate}
+                  onCheckedChange={(value) =>
+                    handleSettingChange("show_win_rate", value)
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Show Risk:Reward</span>
+                <Switch
+                  checked={settings.show_risk_reward}
+                  onCheckedChange={(value) =>
+                    handleSettingChange("show_risk_reward", value)
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Show Balance Curve</span>
+                <Switch
+                  checked={settings.show_balance_curve}
+                  onCheckedChange={(value) =>
+                    handleSettingChange("show_balance_curve", value)
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Show Emotional Analysis</span>
+                <Switch
+                  checked={settings.show_emotional_analysis}
+                  onCheckedChange={(value) =>
+                    handleSettingChange("show_emotional_analysis", value)
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Show Performance Metrics</span>
+                <Switch
+                  checked={settings.show_performance_metrics}
+                  onCheckedChange={(value) =>
+                    handleSettingChange("show_performance_metrics", value)
+                  }
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Broker Integration</CardTitle>
-            <CardDescription>
-              Connect your MT4/MT5 accounts (Demo Only)
-            </CardDescription>
+            <CardTitle>Account Settings</CardTitle>
+            <CardDescription>Manage your account</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-center p-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
-              <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground/25 mb-4" />
-              <p className="text-muted-foreground">
-                Broker integration disabled in demo
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                This feature would sync trades automatically
-              </p>
+            <div>
+              <label className="text-sm font-medium">Email</label>
+              <div className="text-sm text-muted-foreground mt-1">
+                {user?.email}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Account Status</label>
+              <Badge className="mt-2 bg-green-600">Active</Badge>
             </div>
           </CardContent>
         </Card>
