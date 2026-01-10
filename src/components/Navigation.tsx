@@ -14,12 +14,12 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from './ui/sidebar';
-import { 
-  BarChart3, 
-  Calendar, 
-  Settings, 
-  BookOpen, 
-  Target, 
+import {
+  BarChart3,
+  Calendar,
+  Settings,
+  BookOpen,
+  Target,
   TrendingUp,
   FileText,
   Camera,
@@ -27,9 +27,12 @@ import {
   Zap,
   Activity,
   Heart,
-  Lightbulb
+  Lightbulb,
+  LogOut
 } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { useAuth } from '../context/AuthContext';
 
 interface NavigationProps {
   activeSection: string;
