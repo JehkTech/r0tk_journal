@@ -77,6 +77,14 @@ function AppContent() {
   );
 }
 
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
 // Placeholder components for other sections
 function TradesJournal() {
   const mockTrades = [
