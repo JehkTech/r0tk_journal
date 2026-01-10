@@ -9,8 +9,11 @@ import { Badge } from './ui/badge';
 import { Switch } from './ui/switch';
 import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { CalendarIcon, Upload, Save, RotateCcw } from 'lucide-react';
+import { CalendarIcon, Upload, Save, RotateCcw, AlertCircle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useTrades } from '../lib/hooks/useTrades';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 export function TradeEntry() {
   const [date, setDate] = useState<Date>();
