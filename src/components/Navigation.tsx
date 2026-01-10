@@ -14,12 +14,12 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from './ui/sidebar';
-import { 
-  BarChart3, 
-  Calendar, 
-  Settings, 
-  BookOpen, 
-  Target, 
+import {
+  BarChart3,
+  Calendar,
+  Settings,
+  BookOpen,
+  Target,
   TrendingUp,
   FileText,
   Camera,
@@ -27,9 +27,12 @@ import {
   Zap,
   Activity,
   Heart,
-  Lightbulb
+  Lightbulb,
+  LogOut
 } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { useAuth } from '../context/AuthContext';
 
 interface NavigationProps {
   activeSection: string;
@@ -37,6 +40,16 @@ interface NavigationProps {
 }
 
 export function Navigation({ activeSection, onSectionChange }: NavigationProps) {
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   const menuItems = [
     {
       title: "Dashboard",
@@ -152,13 +165,24 @@ export function Navigation({ activeSection, onSectionChange }: NavigationProps) 
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4">
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground">
-            Professional trading through
-          </p>
-          <p className="text-sm font-medium">
-            R0TK Analytics
-          </p>
+        <div className="space-y-3">
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">
+              Professional trading through
+            </p>
+            <p className="text-sm font-medium">
+              R0TK Analytics
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>
