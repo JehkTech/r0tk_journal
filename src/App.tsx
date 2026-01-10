@@ -4,6 +4,8 @@ import { Navigation } from "./components/Navigation";
 import { Dashboard } from "./components/Dashboard";
 import { TradeEntry } from "./components/TradeEntry";
 import { Analytics } from "./components/Analytics";
+import { Login } from "./components/Login";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import {
   Card,
   CardContent,
@@ -23,8 +25,13 @@ import {
 } from "lucide-react";
 import "@/styles/globals.css";
 
-export default function App() {
+function AppContent() {
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState("dashboard");
+
+  if (!user) {
+    return <Login />;
+  }
 
   const renderContent = () => {
     switch (activeSection) {
