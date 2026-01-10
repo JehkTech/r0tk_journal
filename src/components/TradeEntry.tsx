@@ -399,14 +399,23 @@ export function TradeEntry() {
               screenshots: []
             });
             setDate(undefined);
-          }}>
+          }} disabled={isSubmitting}>
             <RotateCcw className="w-4 h-4 mr-2" />
             Reset Form
           </Button>
-          
-          <Button type="submit" className="bg-primary hover:bg-primary/90">
-            <Save className="w-4 h-4 mr-2" />
-            Save Trade
+
+          <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Trade
+              </>
+            )}
           </Button>
         </div>
       </form>
