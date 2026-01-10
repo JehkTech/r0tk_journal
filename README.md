@@ -259,3 +259,12 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+
+## SUPABASE INTEGRATION
+
+SUPABASE_URL=<your-project-url>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+SUPABASE_JWT_SECRET=<some-strong-secret> (only if you later want Supabase to verify your JWTs; for now optional)
+(Optional) SUPABASE_BUCKET_SCREENSHOTS=<bucket-name> if you move images to Supabase storage
+

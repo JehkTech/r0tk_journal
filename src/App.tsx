@@ -6,6 +6,7 @@ import { TradeEntry } from "./components/TradeEntry";
 import { Analytics } from "./components/Analytics";
 import { Login } from "./components/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { supabase } from "../utils/supabase";
 import {
   Card,
   CardContent,
