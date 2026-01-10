@@ -16,7 +16,11 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
 export function TradeEntry() {
+  const { user } = useAuth();
+  const { addTrade, isLoading } = useTrades(user?.id);
+
   const [date, setDate] = useState<Date>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     pair: '',
     side: '',
@@ -33,26 +37,66 @@ export function TradeEntry() {
     screenshots: []
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Trade submitted:', formData);
-    // Reset form
-    setFormData({
-      pair: '',
-      side: '',
-      lotSize: '',
-      entryPrice: '',
-      exitPrice: '',
-      stopLoss: '',
-      takeProfit: '',
-      session: '',
-      strategy: '',
-      emotion: '',
-      confidence: 5,
-      notes: '',
-      screenshots: []
-    });
-    setDate(undefined);
+
+    // Validation
+    if (!date) {
+      toast.error('Please select a trade date');
+      return;
+    }
+    if (!formData.pair || !formData.side) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const entry = parseFloat(formData.entryPrice);
+      const exit = parseFloat(formData.exitPrice);
+      const riskAmount = Math.abs(entry - parseFloat(formData.stopLoss)) * parseFloat(formData.lotSize);
+      const profitLoss = (exit - entry) * parseFloat(formData.lotSize);
+      const rrRatio = parseFloat(calculateRR());
+
+      await addTrade({
+        user_id: user!.id,
+        date: format(date, 'yyyy-MM-dd'),
+        pair: formData.pair,
+        side: formData.side as 'Long' | 'Short',
+        entry_price: entry,
+        exit_price: exit,
+        risk_amount: riskAmount,
+        profit_loss: profitLoss,
+        rr_ratio: rrRatio,
+        session: formData.session,
+        notes: formData.notes
+      });
+
+      toast.success('Trade saved successfully!');
+
+      // Reset form
+      setFormData({
+        pair: '',
+        side: '',
+        lotSize: '',
+        entryPrice: '',
+        exitPrice: '',
+        stopLoss: '',
+        takeProfit: '',
+        session: '',
+        strategy: '',
+        emotion: '',
+        confidence: 5,
+        notes: '',
+        screenshots: []
+      });
+      setDate(undefined);
+    } catch (error) {
+      toast.error('Failed to save trade. Please try again.');
+      console.error('Error saving trade:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const calculateRR = () => {
