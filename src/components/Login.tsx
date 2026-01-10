@@ -15,23 +15,24 @@ export function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setLocalError('');
+    clearError();
 
     // Validation
     if (!email) {
-      setError('Email is required');
+      setLocalError('Email is required');
       return;
     }
     if (!password) {
-      setError('Password is required');
+      setLocalError('Password is required');
       return;
     }
     if (isSignup && password !== confirmPassword) {
-      setError('Passwords do not match');
+      setLocalError('Passwords do not match');
       return;
     }
     if (isSignup && password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setLocalError('Password must be at least 6 characters');
       return;
     }
 
@@ -42,7 +43,7 @@ export function Login() {
         await login(email, password);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      // Error is handled by auth context
     }
   };
 
