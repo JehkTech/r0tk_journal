@@ -40,6 +40,16 @@ interface NavigationProps {
 }
 
 export function Navigation({ activeSection, onSectionChange }: NavigationProps) {
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   const menuItems = [
     {
       title: "Dashboard",
