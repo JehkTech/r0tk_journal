@@ -157,7 +157,8 @@ export function Login() {
                     type="button"
                     onClick={() => {
                       setIsSignup(!isSignup);
-                      setError('');
+                      setLocalError('');
+                      clearError();
                       setEmail('');
                       setPassword('');
                       setConfirmPassword('');
