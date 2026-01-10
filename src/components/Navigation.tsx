@@ -165,13 +165,24 @@ export function Navigation({ activeSection, onSectionChange }: NavigationProps) 
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4">
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground">
-            Professional trading through
-          </p>
-          <p className="text-sm font-medium">
-            R0TK Analytics
-          </p>
+        <div className="space-y-3">
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">
+              Professional trading through
+            </p>
+            <p className="text-sm font-medium">
+              R0TK Analytics
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>
