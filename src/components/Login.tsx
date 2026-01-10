@@ -127,9 +127,9 @@ export function Login() {
               )}
 
               {/* Error Message */}
-              {error && (
+              {(localError || authError) && (
                 <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-                  {error}
+                  {localError || authError}
                 </div>
               )}
 
