@@ -10,8 +10,8 @@ export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const { login, signup, isLoading } = useAuth();
+  const [localError, setLocalError] = useState('');
+  const { login, signup, isLoading, error: authError, clearError } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
