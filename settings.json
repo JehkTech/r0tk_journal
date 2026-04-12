@@ -1,0 +1,7 @@
+{  "prisma": {
+    "datasource": "development",
+    "schema": "src/prisma/schema.prisma",
+    "seed": "src/prisma/seed.js",
+    "studio": "disabled"
+  }
+}

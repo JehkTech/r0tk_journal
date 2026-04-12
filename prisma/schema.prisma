@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model UserAccount {
+  id        Int            @id @default(autoincrement())
+  name      String
+  balance   Float          @default(0)
+  createdAt DateTime       @default(now())
+  entries   JournalEntry[]
+}
+
+model Emotion {
+  id        Int            @id @default(autoincrement())
+  name      String         @unique
+  createdAt DateTime       @default(now())
+  entries   JournalEntry[]
+}
+
+model JournalEntry {
+  id        Int         @id @default(autoincrement())
+  symbol    String
+  killzone  String
+  open      Float
+  close     Float
+  risk      Float
+  documents String      @default("[]")
+  notes     String
+  emotion   Emotion     @relation(fields: [emotionId], references: [id])
+  emotionId Int
+  account   UserAccount @relation(fields: [accountId], references: [id])
+  accountId Int
+  createdAt DateTime    @default(now())
+}
