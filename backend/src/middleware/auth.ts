@@ -4,7 +4,7 @@ import { body, validationResult } from 'express-validator';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
-    userId: number;
+    userId: string;
     username: string;
   };
 }

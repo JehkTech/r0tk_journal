@@ -1,18 +1,12 @@
-import { Low } from 'lowdb';
+import { SupabaseClient } from '@supabase/supabase-js';
+import type { Express } from 'express';
 import { Trade, CreateTradeRequest, UpdateTradeRequest, TradeFilters, DashboardStats, AnalyticsData } from '../types';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-
-interface DatabaseSchema {
-  users: Array<any>;
-  trades: Array<Trade>;
-  screenshots: Array<any>;
-  analytics_cache: Array<any>;
-}
+import { format } from 'date-fns';
 
 export class TradeService {
-  constructor(private db: Low<DatabaseSchema>) {}
+  constructor(private db: SupabaseClient) {}
 
-  async createTrade(userId: number, tradeData: CreateTradeRequest): Promise<Trade> {
+  async createTrade(userId: string, tradeData: CreateTradeRequest): Promise<Trade> {
     const {
       pair,
       side,
@@ -36,118 +30,160 @@ export class TradeService {
       pnl = priceDiff * lot_size * 100000; // Assuming standard lot size calculation
     }
 
-    const trade: Trade = {
-      id: (this.db.data.trades.length > 0 ? Math.max(...this.db.data.trades.map(t => t.id)) : 0) + 1,
-      user_id: userId,
-      pair,
-      side,
-      lot_size,
-      entry_price,
-      exit_price,
-      stop_loss,
-      take_profit,
-      session,
-      strategy,
-      emotion,
-      confidence,
-      notes,
-      pnl,
-      trade_date,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    const { data: trade, error } = await this.db
+      .from('trades')
+      .insert({
+        user_id: userId,
+        pair,
+        side,
+        lot_size,
+        entry_price,
+        exit_price,
+        stop_loss,
+        take_profit,
+        session,
+        strategy,
+        emotion,
+        confidence,
+        notes,
+        pnl,
+        trade_date,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select('*')
+      .single();
 
-    this.db.data.trades.push(trade);
-    await this.db.write();
-    
-    return trade;
+    if (error || !trade) {
+      throw error || new Error('Failed to create trade');
+    }
+
+    return trade as Trade;
   }
 
-  async getTrades(userId: number, filters: TradeFilters = {}): Promise<Trade[]> {
-    let trades = this.db.data.trades.filter(trade => trade.user_id === userId);
+  async getTrades(userId: string, filters: TradeFilters = {}): Promise<Trade[]> {
+    let query = this.db
+      .from('trades')
+      .select('*')
+      .eq('user_id', userId);
 
-    // Apply filters
     if (filters.pair) {
-      trades = trades.filter(trade => trade.pair === filters.pair);
+      query = query.eq('pair', filters.pair);
     }
     if (filters.session) {
-      trades = trades.filter(trade => trade.session === filters.session);
+      query = query.eq('session', filters.session);
     }
     if (filters.emotion) {
-      trades = trades.filter(trade => trade.emotion === filters.emotion);
+      query = query.eq('emotion', filters.emotion);
     }
     if (filters.strategy) {
-      trades = trades.filter(trade => trade.strategy === filters.strategy);
+      query = query.eq('strategy', filters.strategy);
     }
     if (filters.start_date) {
-      trades = trades.filter(trade => trade.trade_date >= filters.start_date!);
+      query = query.gte('trade_date', filters.start_date);
     }
     if (filters.end_date) {
-      trades = trades.filter(trade => trade.trade_date <= filters.end_date!);
+      query = query.lte('trade_date', filters.end_date);
     }
     if (filters.min_pnl !== undefined) {
-      trades = trades.filter(trade => trade.pnl !== undefined && trade.pnl >= filters.min_pnl!);
+      query = query.gte('pnl', filters.min_pnl);
     }
     if (filters.max_pnl !== undefined) {
-      trades = trades.filter(trade => trade.pnl !== undefined && trade.pnl <= filters.max_pnl!);
+      query = query.lte('pnl', filters.max_pnl);
     }
 
-    // Sort by trade date descending
-    trades.sort((a, b) => new Date(b.trade_date).getTime() - new Date(a.trade_date).getTime());
+    query = query.order('trade_date', { ascending: false });
 
-    // Apply pagination
-    if (filters.offset) {
-      trades = trades.slice(filters.offset);
-    }
-    if (filters.limit) {
-      trades = trades.slice(0, filters.limit);
+    if (filters.limit !== undefined) {
+      const offset = filters.offset || 0;
+      const end = offset + filters.limit - 1;
+      query = query.range(offset, end);
     }
 
-    return trades;
+    const { data: trades, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return (trades as Trade[]) || [];
   }
 
-  async getTradeById(userId: number, tradeId: number): Promise<Trade | null> {
-    const trade = this.db.data.trades.find(t => t.id === tradeId && t.user_id === userId);
-    return trade || null;
+  async getTradeById(userId: string, tradeId: string): Promise<Trade | null> {
+    const { data: trade, error } = await this.db
+      .from('trades')
+      .select('*')
+      .eq('id', tradeId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return (trade as Trade) || null;
   }
 
-  async updateTrade(userId: number, tradeData: UpdateTradeRequest): Promise<Trade | null> {
+  async updateTrade(userId: string, tradeData: UpdateTradeRequest): Promise<Trade | null> {
     const { id, ...updateData } = tradeData;
-    
-    const tradeIndex = this.db.data.trades.findIndex(t => t.id === id && t.user_id === userId);
-    if (tradeIndex === -1) {
-      return null;
+
+    const { data: trade, error } = await this.db
+      .from('trades')
+      .update({
+        ...updateData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      throw error;
     }
 
-    const trade = this.db.data.trades[tradeIndex];
-    const updatedTrade = {
-      ...trade,
-      ...updateData,
-      updated_at: new Date().toISOString()
-    };
-
-    this.db.data.trades[tradeIndex] = updatedTrade;
-    await this.db.write();
-    
-    return updatedTrade;
+    return (trade as Trade) || null;
   }
 
-  async deleteTrade(userId: number, tradeId: number): Promise<boolean> {
-    const tradeIndex = this.db.data.trades.findIndex(t => t.id === tradeId && t.user_id === userId);
-    if (tradeIndex === -1) {
-      return false;
+  async deleteTrade(userId: string, tradeId: string): Promise<boolean> {
+    const { data, error } = await this.db
+      .from('trades')
+      .delete()
+      .eq('id', tradeId)
+      .eq('user_id', userId)
+      .select('id');
+
+    if (error) {
+      throw error;
     }
 
-    this.db.data.trades.splice(tradeIndex, 1);
-    await this.db.write();
-    
-    return true;
+    return (data || []).length > 0;
   }
 
-  async getDashboardStats(userId: number): Promise<DashboardStats> {
-    const completedTrades = this.db.data.trades.filter(trade => 
-      trade.user_id === userId && trade.exit_price !== undefined
-    );
+  async createScreenshots(tradeId: string, files: Express.Multer.File[]): Promise<number> {
+    const payload = files.map(file => ({
+      trade_id: tradeId,
+      filename: file.filename,
+      original_name: file.originalname,
+      file_path: file.path,
+      file_size: file.size,
+      mime_type: file.mimetype,
+      created_at: new Date().toISOString()
+    }));
+
+    const { error } = await this.db
+      .from('screenshots')
+      .insert(payload);
+
+    if (error) {
+      throw error;
+    }
+
+    return payload.length;
+  }
+
+  async getDashboardStats(userId: string): Promise<DashboardStats> {
+    const completedTrades = await this.getCompletedTrades(userId);
 
     const totalPnL = completedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
     const totalTrades = completedTrades.length;
@@ -205,10 +241,8 @@ export class TradeService {
       .slice(0, 6);
   }
 
-  async getAnalyticsData(userId: number): Promise<AnalyticsData> {
-    const completedTrades = this.db.data.trades.filter(trade => 
-      trade.user_id === userId && trade.exit_price !== undefined
-    );
+  async getAnalyticsData(userId: string): Promise<AnalyticsData> {
+    const completedTrades = await this.getCompletedTrades(userId);
 
     // Get session performance
     const sessionData: { [key: string]: { trades: number, winning_trades: number, profit: number } } = {};
@@ -291,5 +325,19 @@ export class TradeService {
       common_mistakes: commonMistakes,
       chakra_alignment: chakraAlignment
     };
+  }
+
+  private async getCompletedTrades(userId: string): Promise<Trade[]> {
+    const { data: trades, error } = await this.db
+      .from('trades')
+      .select('*')
+      .eq('user_id', userId)
+      .not('exit_price', 'is', null);
+
+    if (error) {
+      throw error;
+    }
+
+    return (trades as Trade[]) || [];
   }
 }

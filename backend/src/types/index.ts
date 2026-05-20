@@ -1,5 +1,5 @@
 export interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
   password_hash: string;
@@ -8,8 +8,8 @@ export interface User {
 }
 
 export interface Trade {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   pair: string;
   side: 'Long' | 'Short';
   lot_size: number;
@@ -29,8 +29,8 @@ export interface Trade {
 }
 
 export interface Screenshot {
-  id: number;
-  trade_id: number;
+  id: string;
+  trade_id: string;
   filename: string;
   original_name: string;
   file_path: string;
@@ -56,7 +56,7 @@ export interface CreateTradeRequest {
 }
 
 export interface UpdateTradeRequest extends Partial<CreateTradeRequest> {
-  id: number;
+  id: string;
 }
 
 export interface TradeFilters {

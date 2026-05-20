@@ -5,7 +5,6 @@ import { authenticateToken, handleValidationErrors, validateTrade, Authenticated
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { Low } from 'lowdb';
 
 const router = Router();
 
@@ -42,7 +41,9 @@ const upload = multer({
   }
 });
 
-export const createTradeRoutes = (tradeService: TradeService, authService: AuthService, db: Low<any>) => {
+const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+export const createTradeRoutes = (tradeService: TradeService, authService: AuthService) => {
   // Get all trades for authenticated user
   router.get('/', authenticateToken(authService), async (req: AuthenticatedRequest, res) => {
     try {
@@ -70,8 +71,8 @@ export const createTradeRoutes = (tradeService: TradeService, authService: AuthS
   // Get single trade by ID
   router.get('/:id', authenticateToken(authService), async (req: AuthenticatedRequest, res: any) => {
     try {
-      const tradeId = parseInt(req.params.id);
-      if (isNaN(tradeId)) {
+      const tradeId = req.params.id;
+      if (!isUuid(tradeId)) {
         return res.status(400).json({ error: 'Invalid trade ID' });
       }
 
@@ -101,8 +102,8 @@ export const createTradeRoutes = (tradeService: TradeService, authService: AuthS
   // Update trade
   router.put('/:id', authenticateToken(authService), validateTrade, handleValidationErrors, async (req: AuthenticatedRequest, res: any) => {
     try {
-      const tradeId = parseInt(req.params.id);
-      if (isNaN(tradeId)) {
+      const tradeId = req.params.id;
+      if (!isUuid(tradeId)) {
         return res.status(400).json({ error: 'Invalid trade ID' });
       }
 
@@ -121,8 +122,8 @@ export const createTradeRoutes = (tradeService: TradeService, authService: AuthS
   // Delete trade
   router.delete('/:id', authenticateToken(authService), async (req: AuthenticatedRequest, res: any) => {
     try {
-      const tradeId = parseInt(req.params.id);
-      if (isNaN(tradeId)) {
+      const tradeId = req.params.id;
+      if (!isUuid(tradeId)) {
         return res.status(400).json({ error: 'Invalid trade ID' });
       }
 
@@ -141,8 +142,8 @@ export const createTradeRoutes = (tradeService: TradeService, authService: AuthS
   // Upload screenshots for a trade
   router.post('/:id/screenshots', authenticateToken(authService), upload.array('screenshots', 5), async (req: AuthenticatedRequest, res: any) => {
     try {
-      const tradeId = parseInt(req.params.id);
-      if (isNaN(tradeId)) {
+      const tradeId = req.params.id;
+      if (!isUuid(tradeId)) {
         return res.status(400).json({ error: 'Invalid trade ID' });
       }
 
@@ -157,22 +158,9 @@ export const createTradeRoutes = (tradeService: TradeService, authService: AuthS
         return res.status(400).json({ error: 'No files uploaded' });
       }
 
-      // Save screenshot records to database
-      const screenshots = files.map(file => ({
-        id: (db.data.screenshots.length > 0 ? Math.max(...db.data.screenshots.map((s: any) => s.id)) : 0) + 1,
-        trade_id: tradeId,
-        filename: file.filename,
-        original_name: file.originalname,
-        file_path: file.path,
-        file_size: file.size,
-        mime_type: file.mimetype,
-        created_at: new Date().toISOString()
-      }));
+      const count = await tradeService.createScreenshots(tradeId, files);
 
-      db.data.screenshots.push(...screenshots);
-      await db.write();
-
-      res.status(201).json({ message: 'Screenshots uploaded successfully', count: files.length });
+      res.status(201).json({ message: 'Screenshots uploaded successfully', count });
     } catch (error) {
       console.error('Error uploading screenshots:', error);
       res.status(500).json({ error: 'Failed to upload screenshots' });

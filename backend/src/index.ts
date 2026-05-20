@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 3001;
 
 // Initialize database
 const database = new DatabaseManager();
-const db = database.getDb();
+const db = database.getClient();
 
 // Initialize services
 const authService = new AuthService(db);
@@ -65,7 +65,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', createAuthRoutes(authService, tradeService));
-app.use('/api/trades', createTradeRoutes(tradeService, authService, db));
+app.use('/api/trades', createTradeRoutes(tradeService, authService));
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

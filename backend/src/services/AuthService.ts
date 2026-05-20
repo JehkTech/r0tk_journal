@@ -1,21 +1,23 @@
-import { Low } from 'lowdb';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../types';
-
-interface DatabaseSchema {
-  users: Array<User>;
-  trades: Array<any>;
-  screenshots: Array<any>;
-  analytics_cache: Array<any>;
-}
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export class AuthService {
-  constructor(private db: Low<DatabaseSchema>) {}
+  constructor(private db: SupabaseClient) {}
 
   async register(username: string, email: string, password: string): Promise<User> {
     // Check if user already exists
-    const existingUser = this.db.data.users.find(u => u.username === username || u.email === email);
+    const { data: existingUser, error: existingError } = await this.db
+      .from('users')
+      .select('id')
+      .or(`username.eq.${username},email.eq.${email}`)
+      .maybeSingle();
+
+    if (existingError) {
+      throw existingError;
+    }
+
     if (existingUser) {
       throw new Error('User with this username or email already exists');
     }
@@ -25,24 +27,36 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Create new user
-    const user: User = {
-      id: (this.db.data.users.length > 0 ? Math.max(...this.db.data.users.map(u => u.id)) : 0) + 1,
-      username,
-      email,
-      password_hash: passwordHash,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    const { data: user, error } = await this.db
+      .from('users')
+      .insert({
+        username,
+        email,
+        password_hash: passwordHash,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select('*')
+      .single();
 
-    this.db.data.users.push(user);
-    await this.db.write();
-    
-    return user;
+    if (error || !user) {
+      throw error || new Error('Failed to create user');
+    }
+
+    return user as User;
   }
 
   async login(username: string, password: string): Promise<{ user: User; token: string }> {
-    const user = this.db.data.users.find(u => u.username === username || u.email === username);
-    
+    const { data: user, error } = await this.db
+      .from('users')
+      .select('*')
+      .or(`username.eq.${username},email.eq.${username}`)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
     if (!user) {
       throw new Error('Invalid credentials');
     }
@@ -64,12 +78,21 @@ export class AuthService {
     return { user: userWithoutPassword as User, token };
   }
 
-  async getUserById(userId: number): Promise<User | null> {
-    const user = this.db.data.users.find(u => u.id === userId);
-    return user || null;
+  async getUserById(userId: string): Promise<User | null> {
+    const { data: user, error } = await this.db
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return (user as User) || null;
   }
 
-  verifyToken(token: string): { userId: number; username: string } | null {
+  verifyToken(token: string): { userId: string; username: string } | null {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
       return { userId: decoded.userId, username: decoded.username };
@@ -78,33 +101,44 @@ export class AuthService {
     }
   }
 
-  async updateUser(userId: number, updateData: { username?: string; email?: string }): Promise<User | null> {
-    const userIndex = this.db.data.users.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
+  async updateUser(userId: string, updateData: { username?: string; email?: string }): Promise<User | null> {
+    const { data: user, error } = await this.db
+      .from('users')
+      .update({
+        ...updateData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!user) {
       return null;
     }
 
-    const user = this.db.data.users[userIndex];
-    const updatedUser = {
-      ...user,
-      ...updateData,
-      updated_at: new Date().toISOString()
-    };
-
-    this.db.data.users[userIndex] = updatedUser;
-    await this.db.write();
-    
-    const { password_hash, ...userWithoutPassword } = updatedUser;
+    const { password_hash, ...userWithoutPassword } = user as User;
     return userWithoutPassword as User;
   }
 
-  async changePassword(userId: number, currentPassword: string, newPassword: string): Promise<boolean> {
-    const userIndex = this.db.data.users.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
+    const { data: user, error } = await this.db
+      .from('users')
+      .select('id, password_hash')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!user) {
       throw new Error('User not found');
     }
 
-    const user = this.db.data.users[userIndex];
     const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
     if (!isValidPassword) {
       throw new Error('Current password is incorrect');
@@ -115,13 +149,18 @@ export class AuthService {
     const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
 
     // Update password
-    this.db.data.users[userIndex] = {
-      ...user,
-      password_hash: newPasswordHash,
-      updated_at: new Date().toISOString()
-    };
+    const { error: updateError } = await this.db
+      .from('users')
+      .update({
+        password_hash: newPasswordHash,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
 
-    await this.db.write();
+    if (updateError) {
+      throw updateError;
+    }
+
     return true;
   }
 }
