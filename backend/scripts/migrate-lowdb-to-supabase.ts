@@ -78,6 +78,7 @@ const lowdb: LowDbSchema = JSON.parse(raw);
 
 const userIdMap = new Map<number, string>();
 const tradeIdMap = new Map<number, string>();
+const tradeOwnerMap = new Map<number, number>();
 
 const chunkArray = <T>(items: T[], size: number): T[][] => {
   const chunks: T[][] = [];
@@ -129,6 +130,7 @@ const migrate = async () => {
   const tradesPayload = lowdb.trades.map(trade => {
     const newId = crypto.randomUUID();
     tradeIdMap.set(trade.id, newId);
+    tradeOwnerMap.set(trade.id, trade.user_id);
     return {
       id: newId,
       user_id: userIdMap.get(trade.user_id),
@@ -159,10 +161,12 @@ const migrate = async () => {
   console.log('Migrating screenshots...');
   const screenshotsPayload = lowdb.screenshots.map(screenshot => ({
     id: crypto.randomUUID(),
+    user_id: userIdMap.get(tradeOwnerMap.get(screenshot.trade_id) || 0),
     trade_id: tradeIdMap.get(screenshot.trade_id),
     filename: screenshot.filename,
     original_name: screenshot.original_name,
     file_path: screenshot.file_path,
+    storage_path: `${userIdMap.get(tradeOwnerMap.get(screenshot.trade_id) || 0)}/${tradeIdMap.get(screenshot.trade_id)}/${screenshot.filename}`,
     file_size: screenshot.file_size,
     mime_type: screenshot.mime_type,
     legacy_screenshot_id: screenshot.id,

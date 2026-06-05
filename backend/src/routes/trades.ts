@@ -158,7 +158,7 @@ export const createTradeRoutes = (tradeService: TradeService, authService: AuthS
         return res.status(400).json({ error: 'No files uploaded' });
       }
 
-      const count = await tradeService.createScreenshots(tradeId, files);
+      const count = await tradeService.createScreenshots(req.user!.userId, tradeId, files);
 
       res.status(201).json({ message: 'Screenshots uploaded successfully', count });
     } catch (error) {

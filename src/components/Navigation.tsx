@@ -27,7 +27,8 @@ import {
   Zap,
   Activity,
   Heart,
-  Lightbulb
+  Lightbulb,
+  ShieldCheck
 } from 'lucide-react';
 import { Badge } from './ui/badge';
 
@@ -67,6 +68,11 @@ export function Navigation({ activeSection, onSectionChange }: NavigationProps) 
         { title: "Risk Analysis", id: "risk" },
         { title: "Psychology", id: "psychology" }
       ]
+    },
+    {
+      title: "Security Monitor",
+      icon: ShieldCheck,
+      id: "security"
     },
     {
       title: "Settings",

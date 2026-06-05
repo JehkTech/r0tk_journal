@@ -1,10 +1,39 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User } from '../types';
+import { AuthSession, User } from '../types';
 import { SupabaseClient } from '@supabase/supabase-js';
 
+const FALLBACK_JWT_SECRET = 'development-only-fallback-secret-change-me';
+const JWT_EXPIRES_IN = '7d';
+const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+
+interface JwtPayload {
+  userId: string;
+  username: string;
+  sessionId: string;
+}
+
+interface LoginContext {
+  userAgent?: string;
+  ipAddress?: string;
+}
+
 export class AuthService {
-  constructor(private db: SupabaseClient) {}
+  constructor(private db: SupabaseClient) {
+    this.getJwtSecret();
+  }
+
+  private getJwtSecret(): string {
+    const secret = process.env.JWT_SECRET;
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isWeak = !secret || secret === 'fallback-secret' || secret.length < 32;
+
+    if (isProduction && isWeak) {
+      throw new Error('JWT_SECRET must be set to a strong value in production.');
+    }
+
+    return isWeak ? FALLBACK_JWT_SECRET : secret;
+  }
 
   async register(username: string, email: string, password: string): Promise<User> {
     // Check if user already exists
@@ -46,7 +75,7 @@ export class AuthService {
     return user as User;
   }
 
-  async login(username: string, password: string): Promise<{ user: User; token: string }> {
+  async login(username: string, password: string, context: LoginContext = {}): Promise<{ user: User; token: string }> {
     const { data: user, error } = await this.db
       .from('users')
       .select('*')
@@ -66,11 +95,28 @@ export class AuthService {
       throw new Error('Invalid credentials');
     }
 
-    // Generate JWT token
+    const expiresAt = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
+    const { data: session, error: sessionError } = await this.db
+      .from('auth_sessions')
+      .insert({
+        user_id: user.id,
+        user_agent: context.userAgent,
+        ip_address: context.ipAddress,
+        expires_at: expiresAt,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select('*')
+      .single();
+
+    if (sessionError || !session) {
+      throw sessionError || new Error('Failed to create auth session');
+    }
+
     const token = jwt.sign(
-      { userId: user.id, username: user.username },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '7d' }
+      { userId: user.id, username: user.username, sessionId: (session as AuthSession).id },
+      this.getJwtSecret(),
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
     // Remove password hash from response
@@ -92,12 +138,67 @@ export class AuthService {
     return (user as User) || null;
   }
 
-  verifyToken(token: string): { userId: string; username: string } | null {
+  async verifyToken(token: string): Promise<JwtPayload | null> {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-      return { userId: decoded.userId, username: decoded.username };
+      const decoded = jwt.verify(token, this.getJwtSecret()) as Partial<JwtPayload>;
+      if (!decoded.userId || !decoded.username || !decoded.sessionId) {
+        return null;
+      }
+
+      const { data: session, error } = await this.db
+        .from('auth_sessions')
+        .select('id')
+        .eq('id', decoded.sessionId)
+        .eq('user_id', decoded.userId)
+        .is('revoked_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      if (error || !session) {
+        return null;
+      }
+
+      return {
+        userId: decoded.userId,
+        username: decoded.username,
+        sessionId: decoded.sessionId
+      };
     } catch (error) {
       return null;
+    }
+  }
+
+  async revokeSession(userId: string, sessionId: string): Promise<boolean> {
+    const { data, error } = await this.db
+      .from('auth_sessions')
+      .update({
+        revoked_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .is('revoked_at', null)
+      .select('id');
+
+    if (error) {
+      throw error;
+    }
+
+    return (data || []).length > 0;
+  }
+
+  async revokeUserSessions(userId: string): Promise<void> {
+    const { error } = await this.db
+      .from('auth_sessions')
+      .update({
+        revoked_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .is('revoked_at', null);
+
+    if (error) {
+      throw error;
     }
   }
 
@@ -160,6 +261,8 @@ export class AuthService {
     if (updateError) {
       throw updateError;
     }
+
+    await this.revokeUserSessions(userId);
 
     return true;
   }

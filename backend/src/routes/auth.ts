@@ -29,11 +29,25 @@ export const createAuthRoutes = (authService: AuthService, tradeService: TradeSe
   router.post('/login', validateLogin, handleValidationErrors, async (req: any, res: any) => {
     try {
       const { username, password } = req.body;
-      const result = await authService.login(username, password);
+      const result = await authService.login(username, password, {
+        userAgent: req.get('user-agent'),
+        ipAddress: req.ip
+      });
       res.json(result);
     } catch (error) {
       console.error('Login error:', error);
       res.status(401).json({ error: 'Invalid credentials' });
+    }
+  });
+
+  // Revoke current session
+  router.post('/logout', authenticateToken(authService), async (req: AuthenticatedRequest, res: any) => {
+    try {
+      await authService.revokeSession(req.user!.userId, req.user!.sessionId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ error: 'Failed to logout' });
     }
   });
 

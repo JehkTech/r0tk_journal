@@ -13,6 +13,10 @@ export default defineConfig({
   build: {
     outDir: 'dist'
   },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts'
+  },
   server: {
     port: 3003
   }

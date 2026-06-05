@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "vite",
+    "dev:logged": "powershell -ExecutionPolicy Bypass -File scripts/start-dev-logs.ps1",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest"

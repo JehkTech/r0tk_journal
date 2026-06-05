@@ -30,6 +30,9 @@ yarn.lock
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.frontend-dev*.log
+.backend-dev*.log
+/reports/runtime-logs/
 
 .env
 .env.local

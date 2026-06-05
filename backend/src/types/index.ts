@@ -7,6 +7,17 @@ export interface User {
   updated_at: string;
 }
 
+export interface AuthSession {
+  id: string;
+  user_id: string;
+  user_agent?: string;
+  ip_address?: string;
+  expires_at: string;
+  revoked_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Trade {
   id: string;
   user_id: string;
@@ -18,6 +29,7 @@ export interface Trade {
   stop_loss?: number;
   take_profit?: number;
   session: 'Asian' | 'London' | 'NY' | 'Overlap';
+  status?: 'open' | 'closed' | 'cancelled';
   strategy?: string;
   emotion?: 'Confident' | 'Focused' | 'Calm' | 'Rushed' | 'Uncertain' | 'Fearful' | 'Greedy';
   confidence?: number;
@@ -34,6 +46,7 @@ export interface Screenshot {
   filename: string;
   original_name: string;
   file_path: string;
+  storage_path: string;
   file_size: number;
   mime_type: string;
   created_at: string;

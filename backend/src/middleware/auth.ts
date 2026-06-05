@@ -6,11 +6,12 @@ export interface AuthenticatedRequest extends Request {
   user?: {
     userId: string;
     username: string;
+    sessionId: string;
   };
 }
 
 export const authenticateToken = (authService: AuthService) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -18,7 +19,7 @@ export const authenticateToken = (authService: AuthService) => {
       return res.status(401).json({ error: 'Access token required' });
     }
 
-    const user = authService.verifyToken(token);
+    const user = await authService.verifyToken(token);
     if (!user) {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }

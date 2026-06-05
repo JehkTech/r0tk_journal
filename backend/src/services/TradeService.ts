@@ -160,12 +160,14 @@ export class TradeService {
     return (data || []).length > 0;
   }
 
-  async createScreenshots(tradeId: string, files: Express.Multer.File[]): Promise<number> {
+  async createScreenshots(userId: string, tradeId: string, files: Express.Multer.File[]): Promise<number> {
     const payload = files.map(file => ({
+      user_id: userId,
       trade_id: tradeId,
       filename: file.filename,
       original_name: file.originalname,
       file_path: file.path,
+      storage_path: `${userId}/${tradeId}/${file.filename}`,
       file_size: file.size,
       mime_type: file.mimetype,
       created_at: new Date().toISOString()

@@ -4,6 +4,7 @@ import { Navigation } from "./components/Navigation";
 import { Dashboard } from "./components/Dashboard";
 import { TradeEntry } from "./components/TradeEntry";
 import { Analytics } from "./components/Analytics";
+import { SecurityMonitor } from "./components/SecurityMonitor";
 import {
   Card,
   CardContent,
@@ -40,6 +41,8 @@ export default function App() {
       case "journal":
       case "all-trades":
         return <TradesJournal />;
+      case "security":
+        return <SecurityMonitor />;
       case "screenshots":
         return <ScreenshotsGallery />;
       case "notes":

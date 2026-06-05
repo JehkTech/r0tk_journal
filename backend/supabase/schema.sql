@@ -24,6 +24,22 @@ create table if not exists public.users (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.auth_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  user_agent text,
+  ip_address text,
+  expires_at timestamptz not null,
+  revoked_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists auth_sessions_user_id_idx on public.auth_sessions(user_id, created_at desc);
+create index if not exists auth_sessions_active_idx
+  on public.auth_sessions(user_id, expires_at desc)
+  where revoked_at is null;
+
 create table if not exists public.trades (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
@@ -80,6 +96,7 @@ create table if not exists public.analytics_cache (
   cache_key text not null,
   cache_data jsonb not null,
   expires_at timestamptz not null,
+  updated_at timestamptz not null default now(),
   legacy_cache_id bigint,
   created_at timestamptz not null default now()
 );
@@ -89,6 +106,7 @@ create index if not exists analytics_cache_user_expires_idx on public.analytics_
 create index if not exists analytics_cache_expires_at_idx on public.analytics_cache(expires_at);
 
 alter table public.users enable row level security;
+alter table public.auth_sessions enable row level security;
 alter table public.trades enable row level security;
 alter table public.screenshots enable row level security;
 alter table public.analytics_cache enable row level security;
@@ -99,6 +117,27 @@ create policy "Users can read and update own profile"
   to authenticated
   using (auth.uid() = auth_id)
   with check (auth.uid() = auth_id);
+
+create policy "Auth sessions are private to owner"
+  on public.auth_sessions
+  for all
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.users u
+      where u.id = auth_sessions.user_id
+        and u.auth_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.users u
+      where u.id = auth_sessions.user_id
+        and u.auth_id = auth.uid()
+    )
+  );
 
 create policy "Trades are private to owner"
   on public.trades
@@ -125,8 +164,22 @@ create policy "Screenshots are private to owner"
   on public.screenshots
   for all
   to authenticated
-  using (auth.uid() = auth_id)
-  with check (auth.uid() = auth_id);
+  using (
+    exists (
+      select 1
+      from public.users u
+      where u.id = screenshots.user_id
+        and u.auth_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.users u
+      where u.id = screenshots.user_id
+        and u.auth_id = auth.uid()
+    )
+  );
 
 create policy "Analytics cache is private to owner"
   on public.analytics_cache
@@ -151,6 +204,10 @@ create policy "Analytics cache is private to owner"
 
 create trigger set_users_updated_at
 before update on public.users
+for each row execute function public.set_updated_at();
+
+create trigger set_auth_sessions_updated_at
+before update on public.auth_sessions
 for each row execute function public.set_updated_at();
 
 create trigger set_trades_updated_at

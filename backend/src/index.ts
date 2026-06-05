@@ -11,6 +11,7 @@ import { AuthService } from './services/AuthService';
 import { TradeService } from './services/TradeService';
 import { createAuthRoutes } from './routes/auth';
 import { createTradeRoutes } from './routes/trades';
+import { createSecurityRoutes } from './routes/security';
 
 // Load environment variables
 dotenv.config();
@@ -66,6 +67,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', createAuthRoutes(authService, tradeService));
 app.use('/api/trades', createTradeRoutes(tradeService, authService));
+app.use('/api/security', createSecurityRoutes());
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
